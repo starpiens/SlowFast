@@ -1,5 +1,56 @@
-import torch
 import torch.nn as nn
+from slowfast.config import configs
+
+
+class ResConv(nn.Module):
+
+    def __init__(self):
+        super(ResConv, self).__init__()
+
+        self.slow_conv = nn.Conv3d(
+            3,
+            64,
+            kernel_size=(1, 7, 7),
+            stride=(1, 2, 2),
+            padding=(0, 3, 3),
+            bias=False
+        )
+        self.slow_bn = nn.BatchNorm3d(num_features=64)
+        self.slow_act = nn.ReLU(inplace=True)
+        self.slow_pool = nn.MaxPool3d(
+            kernel_size=(1, 3, 3),
+            stride=(1, 2, 2),
+            padding=(0, 1, 1)
+        )
+
+        self.fast_conv = nn.Conv3d(
+            3,
+            64 // configs.beta_inv,
+            kernel_size=(5, 7, 7),
+            stride=(1, 2, 2),
+            padding=(2, 3, 3),
+            bias=False
+        )
+        self.fast_bn = nn.BatchNorm3d(num_features=64 // configs.beta_inv)
+        self.fast_act = nn.ReLU(inplace=True)
+        self.fast_pool = nn.MaxPool3d(
+            kernel_size=(1, 3, 3),
+            stride=(1, 2, 2),
+            padding=(0, 1, 1)
+        )
+
+    def forward(self, x):
+        x[0] = self.slow_conv(x[0])
+        x[0] = self.slow_bn(x[0])
+        x[0] = self.slow_act(x[0])
+        x[0] = self.slow_pool(x[0])
+
+        x[1] = self.fast_conv(x[1])
+        x[1] = self.fast_b(x[1])
+        x[1] = self.fast_act(x[1])
+        x[1] = self.fast_pool(x[1])
+
+        return x
 
 
 class Res18Block(nn.Module):

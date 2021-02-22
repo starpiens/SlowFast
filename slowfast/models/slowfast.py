@@ -1,6 +1,6 @@
 import torch.nn as nn
 import numpy as np
-from .resnet import Res18Block, Res50Block, ResStage
+from .resnet import Res18Block, Res50Block, ResStage, ResConv
 from slowfast.config import configs
 
 
@@ -21,6 +21,8 @@ class SlowFast(nn.Module):
     def __init__(self,
                  ):
         super(SlowFast, self).__init__()
+
+        self.stage1 = ResConv()
 
         self.stage2 = ResStage(
             dim_in=(configs.dim_out[1] + 2 * configs.dim_out[1] // configs.beta_inv,
@@ -67,6 +69,7 @@ class SlowFast(nn.Module):
         )
 
     def forward(self, x):
+        x = self.stage1(x)
         x = self.stage2(x)
         x = self.stage3(x)
         x = self.stage4(x)
