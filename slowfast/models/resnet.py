@@ -151,17 +151,17 @@ class ResStage(nn.Module):
                  temp_kernel_size,
                  stride,
                  num_blocks,
-                 module_name):
+                 block):
         super(ResStage, self).__init__()
         self.num_blocks = num_blocks
 
         for pathway in range(2):
             for i in range(num_blocks):
-                res_block = module_name(
+                res_block = Res50Block(
                     dim_in[pathway] if i == 0 else dim_out[pathway],
                     dim_inner[pathway],
                     dim_out[pathway],
-                    temp_kernel_size,
+                    temp_kernel_size[pathway],
                     stride if i == 0 else 1
                 )
                 self.add_module(f'res_{i}_{pathway}', res_block)
