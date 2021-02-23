@@ -1,7 +1,10 @@
 import torch
+import torch.nn as nn
 from slowfast.models.slowfast import SlowFast
 from slowfast.config import configs
-from slowfast.datasets.loader import load_dataset
+from slowfast.datasets import loader
+from slowfast.datasets import utils
+from torch.utils.data.
 
 def train():
     pass
@@ -12,9 +15,13 @@ def test():
 
 
 def main():
-    train_set = load_dataset(configs.dataset_path, "train")
-    test_set = load_dataset(configs.dataset_path, "test")
-    print(test_set[0])
+    # Create model
+    model = SlowFast("ResNet-18")
+    model = nn.parallel.DistributedDataParallel(model)
+
+    train_loader = loader.construct_loader('train')
+    val_loader = loader.construct_loader('val')
+
 
 
 if __name__ == '__main__':
