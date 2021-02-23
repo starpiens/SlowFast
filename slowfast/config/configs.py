@@ -20,3 +20,4 @@ train_batch_size = 32
 
 # Dataset
 num_classes = 400
+dataset_path = "/Users/starlett/codes/my_slowfast/dataset/"

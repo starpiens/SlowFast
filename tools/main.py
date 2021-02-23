@@ -1,6 +1,7 @@
 import torch
 from slowfast.models.slowfast import SlowFast
 from slowfast.config import configs
+from slowfast.datasets.loader import load_dataset
 
 def train():
     pass
@@ -11,13 +12,9 @@ def test():
 
 
 def main():
-    x_slow = torch.rand((10, 3, 4, 224, 224))
-    x_fast = torch.rand((10, 3, 32, 224, 224))
-    model = SlowFast(configs.backbone)
-    y = model.forward([x_slow, x_fast])
-    print(y)
-    print(y.shape)
-    print(model)
+    train_set = load_dataset(configs.dataset_path, "train")
+    test_set = load_dataset(configs.dataset_path, "test")
+    print(test_set[0])
 
 
 if __name__ == '__main__':
