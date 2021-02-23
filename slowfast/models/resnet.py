@@ -47,7 +47,7 @@ class ResConv(nn.Module):
         x[0] = self.slow_pool(x[0])
 
         x[1] = self.fast_conv(x[1])
-        x[1] = self.fast_b(x[1])
+        x[1] = self.fast_bn(x[1])
         x[1] = self.fast_act(x[1])
         x[1] = self.fast_pool(x[1])
 
@@ -219,15 +219,12 @@ class ResStage(nn.Module):
                 self.add_module('res_' + ('fast' if pathway else 'slow') + f'_{i}', res_block)
 
     def forward(self, x):
-        output = []
         for pathway in range(2):
-            x = x[pathway]
             for i in range(self.num_blocks):
                 m = getattr(self, 'res_' + ('fast' if pathway else 'slow') + f'_{i}')
-                x = m(x)
-            output.append(x)
+                x[pathway] = m(x[pathway])
 
-        return output
+        return x
 
 
 class ResHead(nn.Module):
@@ -238,14 +235,14 @@ class ResHead(nn.Module):
         self.fast_pool = nn.AvgPool3d((configs.alpha * configs.T, 7, 7))
         self.linear = nn.Linear(configs.dim_out[-1] + configs.dim_out[-1] // configs.beta_inv,
                                 configs.num_classes)
-        self.act = nn.Softmax(dim=4)
+        self.act = nn.Softmax(dim=1)
 
     def forward(self, x):
         x[0] = self.slow_pool(x[0])
+        x[0] = x[0].view(x[0].shape[0], -1)
         x[1] = self.fast_pool(x[1])
+        x[1] = x[1].view(x[1].shape[0], -1)
         x = torch.cat([x[0], x[1]], 1)
         x = self.linear(x)
         x = self.act(x)
-        x = x.mean([2, 3, 4])
-        x = x.view(x.shape[0], -1)
         return x

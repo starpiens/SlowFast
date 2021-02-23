@@ -30,13 +30,12 @@ class Fuse(nn.Module):
         fuse = self.bn(fuse)
         fuse = self.act(fuse)
         x_slow = torch.cat([x_slow, fuse], 1)   # Channel-wise concat
-        return x_slow, x_fast
+        return [x_slow, x_fast]
 
 
 class SlowFast(nn.Module):
 
-    def __init__(self,
-                 ):
+    def __init__(self):
         super(SlowFast, self).__init__()
 
         self.stage1 = ResConv()
@@ -93,7 +92,7 @@ class SlowFast(nn.Module):
 
     def forward(self, x):
         """
-        x: (x_slow, x_fast)
+        x: [x_slow, x_fast]
         """
         x = self.stage1(x)
         x = self.stage1_fuse(x)
