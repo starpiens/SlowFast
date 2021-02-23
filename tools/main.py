@@ -1,4 +1,4 @@
-
+from slowfast.models.slowfast import SlowFast
 
 
 def train():
@@ -10,7 +10,8 @@ def test():
 
 
 def main():
-    print('hello world!\n')
+    model = SlowFast()
+    print(model)
 
 
 if __name__ == '__main__':
