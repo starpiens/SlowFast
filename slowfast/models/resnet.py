@@ -209,7 +209,7 @@ class ResStage(nn.Module):
 
         for pathway in range(2):
             for i in range(num_blocks):
-                res_block = Res50Block(
+                res_block = block(
                     dim_in[pathway] if i == 0 else dim_out[pathway],
                     dim_inner[pathway],
                     dim_out[pathway],

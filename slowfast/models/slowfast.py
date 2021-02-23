@@ -35,8 +35,14 @@ class Fuse(nn.Module):
 
 class SlowFast(nn.Module):
 
-    def __init__(self):
+    def __init__(self, backbone):
         super(SlowFast, self).__init__()
+        if backbone == "ResNet-18":
+            block = Res18Block
+        elif backbone == "ResNet-50":
+            block = Res50Block
+        else:
+            raise NotImplementedError("Unknown backbone")
 
         self.stage1 = ResConv()
         self.stage1_fuse = Fuse(configs.dim_out[1] // configs.beta_inv)
@@ -49,7 +55,7 @@ class SlowFast(nn.Module):
             temp_kernel_size=(1, 3),
             stride=1,
             num_blocks=configs.blocks[2],
-            block=Res50Block
+            block=block
         )
         self.stage2_fuse = Fuse(configs.dim_out[2] // configs.beta_inv)
 
@@ -61,7 +67,7 @@ class SlowFast(nn.Module):
             temp_kernel_size=(1, 3),
             stride=2,
             num_blocks=configs.blocks[3],
-            block=Res50Block
+            block=block
         )
         self.stage3_fuse = Fuse(configs.dim_out[3] // configs.beta_inv)
 
@@ -73,7 +79,7 @@ class SlowFast(nn.Module):
             temp_kernel_size=(3, 3),
             stride=2,
             num_blocks=configs.blocks[4],
-            block=Res50Block
+            block=block
         )
         self.stage4_fuse = Fuse(configs.dim_out[4] // configs.beta_inv)
 
@@ -85,7 +91,7 @@ class SlowFast(nn.Module):
             temp_kernel_size=(3, 3),
             stride=2,
             num_blocks=configs.blocks[5],
-            block=Res50Block
+            block=block
         )
 
         self.head = ResHead()
