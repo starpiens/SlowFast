@@ -39,30 +39,38 @@ def construct_loader(split):
 
 class KineticsDataset(torch.utils.data.Dataset):
 
+    _label2num = None
+
     def __init__(self, path, split):
         """
         .csv file format:
         label youtube_id time_start time_end split
         """
         super(KineticsDataset, self).__init__()
-        self.path_to_file = os.path.join(path, f'{split}.csv')
         self.split = split
         self.labels = []
-        self.path_to_videos = []
+        self.path_videos = []
         self.video_meta = {}
-        with open(self.path_to_file, "r") as f:
+
+        path_csv = os.path.join(path, 'labels.csv')
+        self._construct_label2num(path_csv)
+
+        path_csv = os.path.join(path, 'tmp.csv')
+        # self.path_to_file = os.path.join(path, f'{split}.csv')
+        with open(path_csv, "r") as f:
             for clip_idx, line in enumerate(f.read().splitlines()):
                 if not clip_idx:
-                    continue        # First row is title
-                label, yt_id, start, end, split = line.split(',')
+                    # First row is title
+                    continue
+                label_str, yt_id, start, end, split = line.split(',')
                 start = '0' * (6 - len(start)) + start
                 end = '0' * (6 - len(end)) + end
                 path_to_video = os.path.join(
                     path,
-                    f'{split}/{label}/{yt_id}_{start}_{end}.mp4'
+                    f'{split}/{label_str}/{yt_id}_{start}_{end}.mp4'
                 )
-                self.path_to_videos.append(path_to_video)
-                self.labels.append(label)
+                self.path_videos.append(path_to_video)
+                self.labels.append(self._label2num[label_str])
                 self.video_meta[clip_idx] = {}
 
     def __getitem__(self, item):
@@ -83,16 +91,16 @@ class KineticsDataset(torch.utils.data.Dataset):
             video_container = None
             # Load video.
             try:
-                video_container = av.open(self.path_to_videos[item])
+                video_container = av.open(self.path_videos[item])
             except Exception as e:
-                print(f"Failed to load video from {self.path_to_videos[item]} with error {e}")
+                print(f"Failed to load video from {self.path_videos[item]} with error {e}")
 
             # Select a random video if the current video was not able to access.
             if video_container is None:
-                print(f"Failed to meta load video idx {item} from {self.path_to_videos[item]}; trial {i_try}")
+                print(f"Failed to meta load video idx {item} from {self.path_videos[item]}; trial {i_try}")
                 if i_try > num_retries // 2:
                     # Let's try another one
-                    item = random.randint(0, len(self.path_to_videos) - 1)
+                    item = random.randint(0, len(self.path_videos) - 1)
                 continue
 
             # Decode video. Meta info is used to perform selective decoding.
@@ -110,10 +118,10 @@ class KineticsDataset(torch.utils.data.Dataset):
 
             # If decoding failed, select another video.
             if frames is None:
-                print(f'Failed to decode video idx {item} from {self.path_to_videos[item]}; trial {i_try}')
+                print(f'Failed to decode video idx {item} from {self.path_videos[item]}; trial {i_try}')
                 if i_try > num_retries // 2:
                     # Let's try another one
-                    item = random.randint(0, len(self.path_to_videos) - 1)
+                    item = random.randint(0, len(self.path_videos) - 1)
                 continue
 
             # Color normalization
@@ -139,4 +147,12 @@ class KineticsDataset(torch.utils.data.Dataset):
             raise RuntimeError(f"Failed to fetch video after {num_retries} retries.")
 
     def __len__(self):
-        return len(self.path_to_videos)
+        return len(self.path_videos)
+
+    def _construct_label2num(self, path_csv):
+        if self._label2num is not None:
+            return
+        self._label2num = {}
+        with open(path_csv, 'r') as f:
+            for idx, label in enumerate(f.read().splitlines()):
+                self._label2num[label] = idx
