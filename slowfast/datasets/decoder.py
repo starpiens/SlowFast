@@ -285,7 +285,6 @@ def decode(
     num_frames,
     clip_idx=-1,
     num_clips=10,
-    video_meta=None,
     target_fps=30,
     backend="pyav",
     max_spatial_scale=0,
@@ -318,31 +317,14 @@ def decode(
     # Currently support two decoders: 1) PyAV, and 2) TorchVision.
     assert clip_idx >= -1, "Not valied clip_idx {}".format(clip_idx)
     try:
-        if backend == "pyav":
-            frames, fps, decode_all_video = pyav_decode(
-                container,
-                sampling_rate,
-                num_frames,
-                clip_idx,
-                num_clips,
-                target_fps,
-            )
-        elif backend == "torchvision":
-            frames, fps, decode_all_video = torchvision_decode(
-                container,
-                sampling_rate,
-                num_frames,
-                clip_idx,
-                video_meta,
-                num_clips,
-                target_fps,
-                ("visual",),
-                max_spatial_scale,
-            )
-        else:
-            raise NotImplementedError(
-                "Unknown decoding backend {}".format(backend)
-            )
+        frames, fps, decode_all_video = pyav_decode(
+            container,
+            sampling_rate,
+            num_frames,
+            clip_idx,
+            num_clips,
+            target_fps,
+        )
     except Exception as e:
         print("Failed to decode by {} with exception: {}".format(backend, e))
         return None

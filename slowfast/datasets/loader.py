@@ -37,6 +37,12 @@ def construct_loader(split):
     return loader
 
 
+def shuffle_dataset(loader: DataLoader, cur_epoch):
+    sampler = loader.sampler
+    if isinstance(loader.sampler, DistributedSampler):
+        loader.sampler.set_epoch(cur_epoch)
+
+
 class KineticsDataset(torch.utils.data.Dataset):
 
     _label2num = None
@@ -44,25 +50,23 @@ class KineticsDataset(torch.utils.data.Dataset):
     def __init__(self, path, split):
         """
         .csv file format:
-        label youtube_id time_start time_end split
+        label,youtube_id,time_start,time_end,split,is_cc
         """
         super(KineticsDataset, self).__init__()
         self.split = split
         self.labels = []
         self.path_videos = []
-        self.video_meta = {}
 
         path_csv = os.path.join(path, 'labels.csv')
         self._construct_label2num(path_csv)
 
-        path_csv = os.path.join(path, 'tmp.csv')
-        # self.path_to_file = os.path.join(path, f'{split}.csv')
+        path_csv = os.path.join(path, f'{split}.csv')
         with open(path_csv, "r") as f:
             for clip_idx, line in enumerate(f.read().splitlines()):
                 if not clip_idx:
                     # First row is title
                     continue
-                label_str, yt_id, start, end, split = line.split(',')
+                label_str, yt_id, start, end, split, _ = line.split(',')
                 start = '0' * (6 - len(start)) + start
                 end = '0' * (6 - len(end)) + end
                 path_to_video = os.path.join(
@@ -71,7 +75,6 @@ class KineticsDataset(torch.utils.data.Dataset):
                 )
                 self.path_videos.append(path_to_video)
                 self.labels.append(self._label2num[label_str])
-                self.video_meta[clip_idx] = {}
 
     def __getitem__(self, item):
         if self.split in ['train', 'val']:
@@ -103,14 +106,13 @@ class KineticsDataset(torch.utils.data.Dataset):
                     item = random.randint(0, len(self.path_videos) - 1)
                 continue
 
-            # Decode video. Meta info is used to perform selective decoding.
-            frames, fps, decode_all_video = decoder.decode(
+            # Decode video.
+            frames = decoder.decode(
                 video_container,
                 2,
                 32,
                 temporal_sample_idx,
                 10,
-                self.video_meta[item],
                 30,
                 'pyav',
                 min_scale
@@ -128,7 +130,7 @@ class KineticsDataset(torch.utils.data.Dataset):
             frames = utils.tensor_normalize(frames, [0.45] * 3, [0.225] * 3)
             # T H W C -> C T H W.
             frames = frames.permute(3, 0, 1, 2)
-            # Perform data augmentation.
+            # TODO: Perform data augmentation.
             frames = utils.spatial_sampling(
                 frames,
                 spatial_idx=spatial_sample_idx,

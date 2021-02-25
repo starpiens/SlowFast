@@ -16,11 +16,12 @@ elif backbone == 'ResNet-50':
     dim_out += [256, 512, 1024, 2048]
 
 # Train
-train_batch_size = 32
+train_batch_size = 1
+max_epoch = 192
 
 # Dataset
 num_classes = 400
 dataset_path = "/Users/starlett/codes/my_slowfast/dataset/"
 
 # Environment
-num_gpus = 8
+num_gpus = 0
