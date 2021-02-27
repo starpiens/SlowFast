@@ -21,26 +21,20 @@ def construct_loader(split):
     else:
         raise NotImplementedError()
 
-    batch_size = int(configs.train_batch_size / max(1, configs.num_gpus))
+    batch_size_per_gpu = configs.train_batch_size // max(1, configs.num_gpus)
 
     dataset = KineticsDataset(configs.dataset_path, split)
     sampler = DistributedSampler(dataset) if configs.num_gpus > 1 else None
     loader = DataLoader(
         dataset,
-        batch_size=batch_size,
+        batch_size=batch_size_per_gpu,
         shuffle=(False if sampler else shuffle),
         sampler=sampler,
         num_workers=8,
         pin_memory=True,
-        drop_last=drop_last,
+        drop_last=drop_last
     )
     return loader
-
-
-def shuffle_dataset(loader: DataLoader, cur_epoch):
-    sampler = loader.sampler
-    if isinstance(loader.sampler, DistributedSampler):
-        loader.sampler.set_epoch(cur_epoch)
 
 
 class KineticsDataset(torch.utils.data.Dataset):
