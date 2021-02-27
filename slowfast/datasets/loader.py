@@ -48,8 +48,8 @@ class KineticsDataset(torch.utils.data.Dataset):
         """
         super(KineticsDataset, self).__init__()
         self.split = split
-        self.labels = []
-        self.path_videos = []
+        self._labels = []
+        self._path_videos = []
 
         path_csv = os.path.join(path, 'labels.csv')
         self._construct_label2num(path_csv)
@@ -60,44 +60,43 @@ class KineticsDataset(torch.utils.data.Dataset):
                 if not clip_idx:
                     # First row is title
                     continue
-                label_str, yt_id, start, end, split, _ = line.split(',')
+                label_str, yt_id, start, end, _, _ = line.split(',')
                 start = '0' * (6 - len(start)) + start
                 end = '0' * (6 - len(end)) + end
                 path_to_video = os.path.join(
                     path,
                     f'{split}/{label_str}/{yt_id}_{start}_{end}.mp4'
                 )
-                self.path_videos.append(path_to_video)
-                self.labels.append(self._label2num[label_str])
+                self._path_videos.append(path_to_video)
+                self._labels.append(self._label2num[label_str])
 
     def __getitem__(self, item):
         if self.split in ['train', 'val']:
             # -1 indicates random sampling.
             temporal_sample_idx = -1
             spatial_sample_idx = -1
-            min_scale = 256
-            max_scale = 320
+            jitter_scale_min = 256
+            jitter_scale_max = 320
             crop_size = 224
 
         else:
             raise NotImplementedError()
 
         num_retries = 10
-
         for i_try in range(num_retries):
             video_container = None
             # Load video.
             try:
-                video_container = av.open(self.path_videos[item])
+                video_container = av.open(self._path_videos[item])
             except Exception as e:
-                print(f"Failed to load video from {self.path_videos[item]} with error {e}")
+                print(f"Failed to load video from {self._path_videos[item]} with error {e}")
 
             # Select a random video if the current video was not able to access.
             if video_container is None:
-                print(f"Failed to meta load video idx {item} from {self.path_videos[item]}; trial {i_try}")
+                print(f"Failed to meta load video idx {item} from {self._path_videos[item]}; trial {i_try}")
                 if i_try > num_retries // 2:
                     # Let's try another one
-                    item = random.randint(0, len(self.path_videos) - 1)
+                    item = random.randint(0, len(self._path_videos) - 1)
                 continue
 
             # Decode video.
@@ -107,35 +106,33 @@ class KineticsDataset(torch.utils.data.Dataset):
                 32,
                 temporal_sample_idx,
                 10,
-                30,
-                'pyav',
-                min_scale
+                30
             )
 
             # If decoding failed, select another video.
             if frames is None:
-                print(f'Failed to decode video idx {item} from {self.path_videos[item]}; trial {i_try}')
+                print(f'Failed to decode video idx {item} from {self._path_videos[item]}; trial {i_try}')
                 if i_try > num_retries // 2:
                     # Let's try another one
-                    item = random.randint(0, len(self.path_videos) - 1)
+                    item = random.randint(0, len(self._path_videos) - 1)
                 continue
 
             # Color normalization
             frames = utils.tensor_normalize(frames, [0.45] * 3, [0.225] * 3)
             # T H W C -> C T H W.
             frames = frames.permute(3, 0, 1, 2)
-            # TODO: Perform data augmentation.
+            # Perform data augmentation.
             frames = utils.spatial_sampling(
                 frames,
                 spatial_idx=spatial_sample_idx,
-                min_scale=min_scale,
-                max_scale=max_scale,
+                min_scale=jitter_scale_min,
+                max_scale=jitter_scale_max,
                 crop_size=crop_size,
                 random_horizontal_flip=True,
                 inverse_uniform_sampling=False
             )
 
-            label = self.labels[item]
+            label = self._labels[item]
             frames = utils.pack_pathway_output(frames)
             return frames, label, item, {}
 
@@ -143,7 +140,7 @@ class KineticsDataset(torch.utils.data.Dataset):
             raise RuntimeError(f"Failed to fetch video after {num_retries} retries.")
 
     def __len__(self):
-        return len(self.path_videos)
+        return len(self._path_videos)
 
     def _construct_label2num(self, path_csv):
         if self._label2num is not None:
