@@ -189,8 +189,6 @@ class Res50Block(nn.Module):
         x = x + f_x
         x = self.act(x)
 
-        # TODO: Drop connection
-
         return x
 
 
@@ -229,10 +227,12 @@ class ResStage(nn.Module):
 
 class ResHead(nn.Module):
 
-    def __init__(self):
+    def __init__(self, dropout_rate=0.5):
         super(ResHead, self).__init__()
         self.slow_pool = nn.AvgPool3d((configs.T, 7, 7))
         self.fast_pool = nn.AvgPool3d((configs.alpha * configs.T, 7, 7))
+        if dropout_rate > 0:
+            self.dropout = nn.Dropout(dropout_rate)
         self.linear = nn.Linear(configs.dim_out[-1] + configs.dim_out[-1] // configs.beta_inv,
                                 configs.num_classes)
         self.act = nn.Softmax(dim=1)
@@ -243,6 +243,8 @@ class ResHead(nn.Module):
         x[1] = self.fast_pool(x[1])
         x[1] = x[1].view(x[1].shape[0], -1)
         x = torch.cat([x[0], x[1]], 1)
+        if hasattr(self, 'dropout'):
+            x = self.dropout(x)
         x = self.linear(x)
         x = self.act(x)
         return x
