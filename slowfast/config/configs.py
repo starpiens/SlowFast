@@ -2,25 +2,26 @@
 T = 4
 alpha = 8
 beta_inv = 8
-blocks = (0, 0, 3, 4, 6, 3)
+input_frames = 64
 
 # Backbone
 backbone = 'ResNet-18'
-dim_inner = [0, 0]
-dim_out = [0, 64]
+
 if backbone == 'ResNet-18':
-    dim_inner += [64, 128, 256, 512]
-    dim_out += [64, 128, 256, 512]
+    dim_inner = [0, 0, 64, 128, 256, 512]
+    dim_out = [0, 64, 64, 128, 256, 512]
+    blocks = (0, 0, 2, 2, 2, 2)
 elif backbone == 'ResNet-50':
-    dim_inner += [64, 128, 256, 512]
-    dim_out += [256, 512, 1024, 2048]
+    dim_inner = [0, 0, 64, 128, 256, 512]
+    dim_out = [0, 64, 256, 512, 1024, 2048]
+    blocks = (0, 0, 3, 4, 6, 3)
 
 # Train
 train_batch_size = 2
 max_epoch = 192
 
 # Dataset
-num_classes = 400
+num_classes = 100
 dataset_path = "/Users/starlett/codes/my_slowfast/dataset/"
 
 # Environment

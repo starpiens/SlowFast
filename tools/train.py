@@ -68,11 +68,11 @@ def train():
 
     # Create the video train and val loaders.
     train_loader = loader.construct_loader('train')
-    val_loader = loader.construct_loader('train')
+    # val_loader = loader.construct_loader('val')
 
     # Create meters.
     train_meter = TrainMeter(len(train_loader))
-    val_meter = ValMeter(len(val_loader))
+    # val_meter = ValMeter(len(val_loader))
 
     # Train.
     for cur_epoch in range(start_epoch, configs.max_epoch):
@@ -81,7 +81,7 @@ def train():
 
         print(f"Starting epoch {cur_epoch}")
         train_epoch(train_loader, model, optimizer, train_meter, cur_epoch)
-        eval_epoch(train_loader, model, val_meter, cur_epoch)
+        # eval_epoch(train_loader, model, val_meter, cur_epoch)
 
 
 if __name__ == '__main__':
