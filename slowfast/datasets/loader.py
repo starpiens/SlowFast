@@ -51,7 +51,7 @@ class KineticsDataset(torch.utils.data.Dataset):
         self._labels = []
         self._path_videos = []
 
-        path_csv = os.path.join(path, 'labels.csv')
+        path_csv = os.path.join(path, 'classes.csv')
         self._construct_label2num(path_csv)
 
         path_csv = os.path.join(path, f'{split}.csv')
@@ -73,12 +73,9 @@ class KineticsDataset(torch.utils.data.Dataset):
     def __getitem__(self, item):
         if self.split in ['train', 'val']:
             # -1 indicates random sampling.
-            temporal_sample_idx = -1
-            spatial_sample_idx = -1
             jitter_scale_min = 256
             jitter_scale_max = 320
             crop_size = 224
-
         else:
             raise NotImplementedError()
 
@@ -100,14 +97,9 @@ class KineticsDataset(torch.utils.data.Dataset):
                 continue
 
             # Decode video.
-            frames = decoder.decode(
-                video_container,
-                2,
-                32,
-                temporal_sample_idx,
-                10,
-                30
-            )
+            frames = decoder.decode(video_container,
+                                    configs.input_frames // (configs.alpha * configs.T),
+                                    configs.alpha * configs.T)
 
             # If decoding failed, select another video.
             if frames is None:
@@ -118,18 +110,15 @@ class KineticsDataset(torch.utils.data.Dataset):
                 continue
 
             # Color normalization
-            frames = utils.tensor_normalize(frames, [0.45] * 3, [0.225] * 3)
+            frames = utils.tensor_normalize(frames, 0.45, 0.225)
             # T H W C -> C T H W.
             frames = frames.permute(3, 0, 1, 2)
             # Perform data augmentation.
             frames = utils.spatial_sampling(
                 frames,
-                spatial_idx=spatial_sample_idx,
                 min_scale=jitter_scale_min,
                 max_scale=jitter_scale_max,
-                crop_size=crop_size,
-                random_horizontal_flip=True,
-                inverse_uniform_sampling=False
+                crop_size=crop_size
             )
 
             label = self._labels[item]
