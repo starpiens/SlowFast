@@ -17,7 +17,7 @@ elif backbone == 'ResNet-50':
     blocks = (0, 0, 3, 4, 6, 3)
 
 # Train
-train_batch_size = 2
+train_batch_size = 17
 max_epoch = 192
 
 # Dataset

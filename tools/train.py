@@ -1,43 +1,63 @@
 import torch
 import torch.nn as nn
 import numpy as np
-from torch.utils.data.distributed import DistributedSampler
+
+from tqdm import tqdm
+import math
 
 from slowfast.models.slowfast import SlowFast
 from slowfast.config import configs
 from slowfast.datasets import loader
 from slowfast.datasets import utils
-import slowfast.utils.distributed as du
-from slowfast.utils.meters import TrainMeter, ValMeter
 from slowfast.models.build import build_model
+from slowfast.utils.metrics import num_topK_correct
 
 
-def train_epoch(train_loader, model, optimizer, train_meter, cur_epoch):
+def train_epoch(train_loader, model, optimizer, cur_epoch):
     model.train()
-    data_size = len(train_loader)
+    loss_fn = nn.CrossEntropyLoss()
+    num_iters = len(train_loader)
+    data_size = num_iters * configs.train_batch_size
 
-    for cur_iter, (inputs, labels, _, meta) in enumerate(train_loader):
-        # Transfer the data to the current GPU device.
-        if configs.num_gpus > 0:
-            for i in range(len(inputs)):
-                inputs[i] = inputs[i].cuda(non_blocking=True)
-            labels = labels.cuda()
+    sum_loss = 0
+    sum_top1_correct = 0
+    sum_top5_correct = 0
 
-        # TODO: Update the learning rate.
-        # lr = 0.0001
-        # for param_group in optimizer.param_groups:
-        #     param_group['lr'] = lr
+    with tqdm(total=num_iters, desc=f'Epoch {cur_epoch}') as pbar:
+        for cur_iter, (inputs, labels, _, meta) in enumerate(train_loader):
+            # Transfer the data to the current GPU device.
+            if configs.num_gpus > 0:
+                for i in range(len(inputs)):
+                    inputs[i] = inputs[i].cuda(non_blocking=True)
+                labels = labels.cuda(non_blocking=True)
 
-        # Forward pass
-        preds = model(inputs)
-        loss_fn = nn.CrossEntropyLoss()
-        loss = loss_fn(preds, labels)
-        print(f'epoch: {cur_epoch}, iter: {cur_iter}, loss: {loss}')
+            # TODO: Update the learning rate.
+            # lr = 0.0001
+            # for param_group in optimizer.param_groups:
+            #     param_group['lr'] = lr
 
-        # Backward pass
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
+            # Forward pass
+            preds = model(inputs)
+            loss = loss_fn(preds, labels)
+            if math.isnan(loss):
+                raise RuntimeError("Got NaN loss")
+            top1_correct, top5_correct = num_topK_correct(preds, labels, (1, 5))
+
+            # Training stats
+            sum_loss += loss
+            sum_top1_correct += top1_correct
+            sum_top5_correct += top5_correct
+
+            # Backward pass
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+            pbar.update()
+
+    print(f'loss: {sum_loss / num_iters: .4f}, ',
+          f'top1 acc: {sum_top1_correct / data_size * 100: .4f}%, '
+          f'top5 acc: {sum_top5_correct / data_size * 100: .4f}%', flush=True)
 
 
 def eval_epoch(val_loader, model, val_meter, cur_epoch):
@@ -47,9 +67,8 @@ def eval_epoch(val_loader, model, val_meter, cur_epoch):
 
 def train():
     # Setup environment.
-    # du.init_distributed_training()
-    np.random.seed(42)
-    torch.manual_seed(42)
+    # np.random.seed(42)
+    # torch.manual_seed(42)
 
     # Create model.
     model = build_model('ResNet-18')
@@ -70,17 +89,10 @@ def train():
     train_loader = loader.construct_loader('train')
     # val_loader = loader.construct_loader('val')
 
-    # Create meters.
-    train_meter = TrainMeter(len(train_loader))
-    # val_meter = ValMeter(len(val_loader))
-
     # Train.
     for cur_epoch in range(start_epoch, configs.max_epoch):
-        if isinstance(train_loader.sampler, DistributedSampler):
-            train_loader.sampler.set_epoch(cur_epoch)
 
-        print(f"Starting epoch {cur_epoch}")
-        train_epoch(train_loader, model, optimizer, train_meter, cur_epoch)
+        train_epoch(train_loader, model, optimizer, cur_epoch)
         # eval_epoch(train_loader, model, val_meter, cur_epoch)
 
 
