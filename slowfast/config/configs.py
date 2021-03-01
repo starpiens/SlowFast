@@ -17,7 +17,7 @@ elif backbone == 'ResNet-50':
     blocks = (0, 0, 3, 4, 6, 3)
 
 ##### Train #####
-train_batch_size = 17
+train_batch_size = 11
 max_epoch = 192
 num_gpus = 0  # Assuming 0 or 1.
 checkpoint_path = "/Users/starlett/codes/my_slowfast/checkpoints/"
