@@ -11,3 +11,6 @@
 dataset/train
 dataset/val
 dataset/test
+
+# Models
+*.pth

@@ -11,6 +11,7 @@ from slowfast.datasets import loader
 from slowfast.datasets import utils
 from slowfast.models.build import build_model
 from slowfast.utils.metrics import num_topK_correct
+from slowfast.utils import checkpoint as cu
 
 
 def train_epoch(train_loader, model, optimizer, cur_epoch):
@@ -66,10 +67,6 @@ def eval_epoch(val_loader, model, val_meter, cur_epoch):
 
 
 def train():
-    # Setup environment.
-    # np.random.seed(42)
-    # torch.manual_seed(42)
-
     # Create model.
     model = build_model('ResNet-18')
 
@@ -83,16 +80,16 @@ def train():
     )
 
     # TODO: Load a checkpoint to resume training if applicable.
-    start_epoch = 0
+    start_epoch = cu.load(model, optimizer)
 
     # Create the video train and val loaders.
     train_loader = loader.construct_loader('train')
     # val_loader = loader.construct_loader('val')
 
     # Train.
-    for cur_epoch in range(start_epoch, configs.max_epoch):
-
-        train_epoch(train_loader, model, optimizer, cur_epoch)
+    for epoch in range(start_epoch, configs.max_epoch):
+        train_epoch(train_loader, model, optimizer, epoch)
+        cu.save(model, optimizer, epoch)
         # eval_epoch(train_loader, model, val_meter, cur_epoch)
 
 
