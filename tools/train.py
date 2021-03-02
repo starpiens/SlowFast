@@ -1,17 +1,15 @@
 import torch
 import torch.nn as nn
-import numpy as np
 
 from tqdm import tqdm
 import math
 
-from slowfast.models.slowfast import SlowFast
 from slowfast.config import configs
 from slowfast.datasets import loader
-from slowfast.datasets import utils
 from slowfast.models.build import build_model
 from slowfast.utils.metrics import num_topK_correct
 from slowfast.utils import checkpoint as cu
+from slowfast.utils import lr
 
 
 def train_epoch(loader, model, optimizer, epoch):
@@ -25,17 +23,15 @@ def train_epoch(loader, model, optimizer, epoch):
     sum_top5_correct = 0
 
     with tqdm(total=num_iters, desc=f'Epoch {epoch}, training') as pbar:
-        for iter, (inputs, labels, _, meta) in enumerate(loader):
+        for it, (inputs, labels, _, meta) in enumerate(loader):
             # Transfer the data to the current GPU device.
             if configs.num_gpus > 0:
                 for i in range(len(inputs)):
                     inputs[i] = inputs[i].cuda(non_blocking=True)
                 labels = labels.cuda(non_blocking=True)
 
-            # TODO: Update the learning rate.
-            # lr = 0.0001
-            # for param_group in optimizer.param_groups:
-            #     param_group['lr'] = lr
+            learning_rate = lr.get_lr(epoch + it / num_iters)
+            optimizer.param_groups[0]['lr'] = learning_rate
 
             # Forward pass
             preds = model(inputs)
