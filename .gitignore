@@ -7,10 +7,5 @@
 # Python
 **/__pycache__/
 
-# Dataset
-dataset/train
-dataset/val
-dataset/test
-
 # Models
 *.pth
