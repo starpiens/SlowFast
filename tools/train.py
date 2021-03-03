@@ -100,7 +100,6 @@ def train():
         nesterov=True
     )
 
-    # TODO: Load a checkpoint to resume training if applicable.
     start_epoch = cu.load(model, optimizer)
 
     # Create the video train and val loaders.
