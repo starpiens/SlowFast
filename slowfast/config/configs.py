@@ -17,14 +17,14 @@ elif backbone == 'ResNet-50':
     blocks = (0, 0, 3, 4, 6, 3)
 
 ##### Train #####
-train_batch_size = 8
-cosine_lr_base = 0.1 * train_batch_size / 64
-start_lr = 0.01
+train_batch_size = 16
+cosine_lr_base = 1.0 * train_batch_size / 64
+start_lr = 0.1 * train_batch_size / 64
 warmup_epochs = 32
 max_epoch = 192
-num_gpus = 0  # Assuming 0 or 1.
-checkpoint_path = "/Users/starlett/codes/my_slowfast/checkpoints/"
+num_gpus = 1  # Assuming 0 or 1.
+checkpoint_path = "/data/SlowFast/slowfast/checkpoints/"
 
 ##### Dataset #####
 num_classes = 100
-dataset_path = "/Users/starlett/codes/my_slowfast/dataset/"
+dataset_path = "/data/Kinetics-100/"
