@@ -61,6 +61,9 @@ class KineticsDataset(torch.utils.data.Dataset):
                     # First row is title
                     continue
                 label_str, yt_id, start, end, _, _ = line.split(',')
+                self._labels.append(self._label2num[label_str])
+                if '"' in label_str:
+                    label_str = label_str[1:-1]
                 start = '0' * (6 - len(start)) + start
                 end = '0' * (6 - len(end)) + end
                 path_to_video = os.path.join(
@@ -68,7 +71,6 @@ class KineticsDataset(torch.utils.data.Dataset):
                     f'{split}/{label_str}/{yt_id}_{start}_{end}.mp4'
                 )
                 self._path_videos.append(path_to_video)
-                self._labels.append(self._label2num[label_str])
 
     def __getitem__(self, item):
         if self.split in ['train', 'val']:
@@ -91,7 +93,7 @@ class KineticsDataset(torch.utils.data.Dataset):
             # Select a random video if the current video was not able to access.
             if video_container is None:
                 print(f"Failed to meta load video idx {item} from {self._path_videos[item]}; trial {i_try}")
-                if i_try > num_retries // 2:
+                if i_try > num_retries // 4:
                     # Let's try another one
                     item = random.randint(0, len(self._path_videos) - 1)
                 continue
@@ -104,7 +106,7 @@ class KineticsDataset(torch.utils.data.Dataset):
             # If decoding failed, select another video.
             if frames is None:
                 print(f'Failed to decode video idx {item} from {self._path_videos[item]}; trial {i_try}')
-                if i_try > num_retries // 2:
+                if i_try > num_retries // 4:
                     # Let's try another one
                     item = random.randint(0, len(self._path_videos) - 1)
                 continue
