@@ -24,12 +24,10 @@ def construct_loader(split):
     batch_size_per_gpu = configs.train_batch_size // max(1, configs.num_gpus)
 
     dataset = KineticsDataset(configs.dataset_path, split)
-    sampler = DistributedSampler(dataset) if configs.num_gpus > 1 else None
     loader = DataLoader(
         dataset,
         batch_size=batch_size_per_gpu,
-        shuffle=(False if sampler else shuffle),
-        sampler=sampler,
+        shuffle=shuffle,
         num_workers=8,
         pin_memory=True,
         drop_last=drop_last
@@ -112,7 +110,7 @@ class KineticsDataset(torch.utils.data.Dataset):
                 continue
 
             # Color normalization
-            frames = utils.tensor_normalize(frames, 0.45, 0.225)
+            frames = utils.tensor_normalize(frames, mean=0.45, std=0.225)
             # T H W C -> C T H W.
             frames = frames.permute(3, 0, 1, 2)
             # Perform data augmentation.
