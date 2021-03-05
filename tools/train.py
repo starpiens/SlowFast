@@ -89,7 +89,7 @@ def eval_epoch(loader, model, epoch):
 
 def train():
     # Create model.
-    model = build_model('ResNet-18')
+    model = build_model(configs.backbone)
 
     # Construct the optimizer.
     optimizer = torch.optim.SGD(
