@@ -79,34 +79,51 @@ class Res18Block(nn.Module):
             )
             self.conv0_bn = nn.BatchNorm3d(dim_out)
 
-        # Tx3x3, dim_inner.
-        self.conv1 = nn.Conv3d(
-            dim_in,
+        # Tx1x1, dim_inner.
+        if temp_kernel_size > 1:
+            self.conv1 = nn.Conv3d(
+                dim_in,
+                dim_inner,
+                (temp_kernel_size, 1, 1),
+                padding=(temp_kernel_size//2, 0, 0),
+                bias=False
+            )
+            self.conv1_bn = nn.BatchNorm3d(dim_inner)
+            self.conv1_act = nn.ReLU(inplace=True)
+
+        # 1x3x3, dim_inner.
+        self.conv2 = nn.Conv3d(
+            dim_inner if temp_kernel_size > 1 else dim_in,
             dim_inner,
-            kernel_size=(temp_kernel_size, 3, 3),
-            padding=(temp_kernel_size // 2, 1, 1),
+            kernel_size=(1, 3, 3),
+            padding=(0, 1, 1),
             bias=False
         )
-        self.conv1_bn = nn.BatchNorm3d(dim_inner)
-        self.conv1_act = nn.ReLU(inplace=True)
+        self.conv2_bn = nn.BatchNorm3d(dim_inner)
+        self.conv2_act = nn.ReLU(inplace=True)
 
         # 1x3x3, dim_out. Stride is applied here.
-        self.conv2 = nn.Conv3d(
+        self.conv3 = nn.Conv3d(
             dim_inner,
             dim_out,
             kernel_size=(1, 3, 3),
             stride=(1, stride, stride),
             padding=(0, 1, 1),
         )
-        self.conv2_bn = nn.BatchNorm3d(dim_out)
+        self.conv3_bn = nn.BatchNorm3d(dim_out)
         self.act = nn.ReLU(inplace=True)
 
     def forward(self, x):
-        f_x = self.conv1(x)
-        f_x = self.conv1_bn(f_x)
-        f_x = self.conv1_act(f_x)
+        f_x = x
+        if hasattr(self, 'conv1'):
+            f_x = self.conv1(f_x)
+            f_x = self.conv1_bn(f_x)
+            f_x = self.conv1_act(f_x)
         f_x = self.conv2(f_x)
         f_x = self.conv2_bn(f_x)
+        f_x = self.conv2_act(f_x)
+        f_x = self.conv3(f_x)
+        f_x = self.conv3_bn(f_x)
 
         if hasattr(self, 'conv0'):
             x = self.conv0_bn(self.conv0(x))
